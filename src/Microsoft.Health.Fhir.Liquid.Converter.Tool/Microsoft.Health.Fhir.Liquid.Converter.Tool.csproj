@@ -5,6 +5,17 @@
     <TargetFramework>$(LatestFramework)</TargetFramework>
     <IsPackable>true</IsPackable>
     <NuspecFile>Servicewell.Fhir.Liquid.Converter.Tool.nuspec</NuspecFile>
+    <AssemblyName>flc-engine</AssemblyName>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+    <PackAsTool>True</PackAsTool>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,7 +36,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Health.Fhir.Liquid.Converter\Microsoft.Health.Fhir.Liquid.Converter.csproj" />
-    <ProjectReference Include="..\Microsoft.Health.Fhir.TemplateManagement\Microsoft.Health.Fhir.TemplateManagement.csproj" />
   </ItemGroup>
 
   <ItemGroup>

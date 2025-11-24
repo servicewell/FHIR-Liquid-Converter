@@ -29,12 +29,10 @@ namespace Microsoft.Health.Fhir.Liquid.Converter.Tool
                 Console.ReadLine();
             }
 #endif
-            var parseResult = Parser.Default.ParseArguments<ConverterOptions, PullTemplateOptions, PushTemplateOptions>(args);
+            var parseResult = Parser.Default.ParseArguments<ConverterOptions>(args);
             try
             {
                 parseResult.WithParsed<ConverterOptions>(ConverterLogicHandler.Convert);
-                await parseResult.WithParsedAsync<PullTemplateOptions>(TemplateManagementLogicHandler.PullAsync);
-                await parseResult.WithParsedAsync<PushTemplateOptions>(TemplateManagementLogicHandler.PushAsync);
                 parseResult.WithNotParsed(HandleOptionsParseError);
                 return 0;
             }

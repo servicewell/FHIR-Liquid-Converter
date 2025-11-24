@@ -1,4 +1,4 @@
-name: Build Linux Executable
+name: Build FLC Converter Tool Executable
 
 on:
   workflow_dispatch:

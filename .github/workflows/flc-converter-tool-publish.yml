@@ -1,0 +1,61 @@
+name: Build Linux Executable
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build Release
+        run: dotnet build --configuration Release
+
+      - name: Publish self-contained executable (linux-x64)
+        run: |
+          dotnet publish \
+            ./src/Microsoft.Health.Fhir.Liquid.Converter.Tool/Microsoft.Health.Fhir.Liquid.Converter.Tool.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:PublishTrimmed=false \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            -o ./publish/linux-x64
+
+      - name: Upload published executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: flc-engine-linux-x64
+          path: publish/linux-x64
+
+      # # OPTIONAL: also create the NuGet Tool package
+      # - name: Pack .NET Tool (nupkg)
+      #   run: |
+      #     dotnet pack \
+      #       ./src/Microsoft.Health.Fhir.Liquid.Converter.Tool/Microsoft.Health.Fhir.Liquid.Converter.Tool.csproj \
+      #       --configuration Release \
+      #       --no-build \
+      #       -o ./nupkg
+
+      # - name: Upload package
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: flc-engine-nupkg
+      #     path: nupkg

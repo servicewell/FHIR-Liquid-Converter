@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sync default branch from upstream
+        if: github.repository_owner == 'Region-Skane'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Sync remote fork from its parent (no checkout needed)
           gh repo sync "${GITHUB_REPOSITORY}"
-        

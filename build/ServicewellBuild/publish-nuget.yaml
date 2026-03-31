@@ -1,0 +1,85 @@
+# Fhir.Liquid.Converter
+
+#name: $(majorMinorVersion).$(semanticVersion)
+
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-2022'
+
+variables:
+  #majorMinorVersion: 1.0
+  #semanticVersion: $[counter(variables['majorMinorVersion'], 0)]
+  projectName: 'Fhir.Liquid.Converter'
+  solution: '**/Fhir.Liquid.Converter.sln'
+  project: '**/Microsoft.Health.Fhir.Liquid.Converter.csproj'
+  nuspec: '**/Servicewell.Fhir.Liquid.Converter.nuspec'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  versionMajor: '0'
+  versionMinor: '0'
+  versionPatch: $[counter(format('{0}.{1}', variables['versionMajor'], variables['versionMinor']), 0)]
+  versionType: '' #example -preview, -rc
+  versionPackage: $(versionMajor).$(versionMinor).$(versionPatch)$(versionType)
+
+steps:
+
+# Set .net-version
+- task: UseDotNet@2
+  displayName: 'Use .NET 8 SDK'
+  inputs:
+    version: '8.x'
+    packageType: sdk
+
+# Install
+- task: NuGetToolInstaller@1
+  displayName: 'NuGet Installer'
+
+# Restore
+- task: NuGetCommand@2
+  displayName: 'NuGet Restore'
+  inputs:
+    command: 'restore'
+    restoreSolution: '$(solution)'
+    feedsToUse: 'config'
+    nugetConfigPath: './nuget.servicewell.config'
+
+# Build
+- task: VSBuild@1
+  displayName: 'Building Solution'
+  inputs:
+    solution: '$(solution)'
+    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(Build.ArtifactStagingDirectory)"'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+
+# Pack
+- task: DotNetCoreCLI@2
+  displayName: 'Packing Project'
+  inputs:
+    command: 'pack'
+    packagesToPack: '$(project)'
+    nobuild: true
+    includesymbols: true
+    includesource: true
+    versioningScheme: 'byEnvVar'
+    versionEnvVar: 'versionPackage'
+    packDirectory:  '$(Build.ArtifactStagingDirectory)'
+
+# Authenticate
+- task: NuGetAuthenticate@1
+  inputs:
+    feedUrl: 'https://servicewell.pkgs.visualstudio.com/wof-portal/_packaging/WOF-feed'
+  displayName: 'NuGet Authenticate'
+
+# Push
+- task: NuGetCommand@2
+  displayName: 'Pushing Nuget'
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: 'wof-portal/WOF-feed'
+    allowPackageConflicts: true
+

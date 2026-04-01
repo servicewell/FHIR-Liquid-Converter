@@ -18,7 +18,7 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
   versionMajor: '0'
-  versionMinor: '0'
+  versionMinor: '1'
   versionPatch: $[counter(format('{0}.{1}', variables['versionMajor'], variables['versionMinor']), 0)]
   versionType: '' #example -preview, -rc
   versionPackage: $(versionMajor).$(versionMinor).$(versionPatch)$(versionType)

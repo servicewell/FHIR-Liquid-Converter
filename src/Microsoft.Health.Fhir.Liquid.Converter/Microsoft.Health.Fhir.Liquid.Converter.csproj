@@ -27,10 +27,10 @@
 			<PackageReference Include="Firely.Fhir.Packages" Version="3.0.2" />
       <PackageReference Include="Firely.Fhir.Validation.R4" Version="3.1.0" />
       <PackageReference Include="Hl7.Fhir.Specification.R4" Version="6.1.0" />
-      <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.4" />
-      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.4" />
+      <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.5" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
 			<PackageReference Include="Microsoft.Health.MeasurementUtility" Version="7.1.12" />
-			<PackageReference Include="Newtonsoft.Json" Version="13.0.4" NoWarn="NU1605" />
+			<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 			<PackageReference Include="NJsonSchema" Version="10.7.2" />
 			<PackageReference Include="xunit.abstractions" Version="2.0.3" />
 		</ItemGroup>

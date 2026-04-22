@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Firely.Fhir.Packages;
 using Firely.Fhir.Validation;
 using Hl7.Fhir.Specification.Source;
@@ -25,7 +26,7 @@ namespace Microsoft.Health.Fhir.Liquid.Converter.Validators;
 /// </summary>
 public static class ProfileValidator
 {
-    private static readonly ConcurrentDictionary<string, Validator> _validatorCache = new();
+    private static readonly ConcurrentDictionary<string, Lazy<ValidatorContext>> _validatorCache = new();
 
     /// <summary>
     /// Validates that a FHIR resource conforms to its declared profiles.
@@ -42,6 +43,7 @@ public static class ProfileValidator
     /// Note: The first validation call takes approximately 2.5 seconds due to initialization overhead.
     /// Subsequent calls benefit from caching and typically complete in 10-400ms depending on resource complexity.
     /// For Bundles, each entry is validated individually, and validation errors include the entry index for easier debugging.
+    /// Concurrent validations against the same cache directory are serialized because the underlying validation pipeline is not thread-safe.
     /// </remarks>
     public static void Validate(FhirModel.Resource resource, string fhirCacheDirectory = null, JObject original = null)
     {
@@ -56,23 +58,42 @@ public static class ProfileValidator
             throw new DirectoryNotFoundException($"The specified FHIR cache directory does not exist: {cacheKey}");
         }
 
-        var validator = _validatorCache.GetOrAdd(cacheKey, CreateValidator);
+        var validatorContext = GetValidatorContext(cacheKey);
 
-        if (resource is FhirModel.Bundle bundle)
+        lock (validatorContext.SyncRoot)
         {
-            ValidateBundle(validator, bundle, original);
-            return;
-        }
+            if (resource is FhirModel.Bundle bundle)
+            {
+                ValidateBundle(validatorContext.Validator, bundle, original);
+                return;
+            }
 
-        ValidateSingleResource(validator, resource, original);
+            ValidateSingleResource(validatorContext.Validator, resource, original);
+        }
     }
 
     /// <summary>
-    /// Creates a new FHIR Validator instance configured with a DirectorySource for the specified directory.
+    /// Creates or retrieves the validator context for the specified cache directory.
+    /// </summary>
+    /// <param name="cacheKey">The cache directory key.</param>
+    /// <returns>A validator context containing the shared validator instance and synchronization object.</returns>
+    private static ValidatorContext GetValidatorContext(string cacheKey)
+    {
+        var lazyContext = _validatorCache.GetOrAdd(
+            cacheKey,
+            static key => new Lazy<ValidatorContext>(
+                () => CreateValidatorContext(key),
+                LazyThreadSafetyMode.ExecutionAndPublication));
+
+        return lazyContext.Value;
+    }
+
+    /// <summary>
+    /// Creates a new validator context configured with a DirectorySource for the specified directory.
     /// </summary>
     /// <param name="directory">The directory path to the FHIR cache</param>
-    /// <returns>A configured FHIR Validator instance</returns>
-    private static Validator CreateValidator(string directory)
+    /// <returns>A configured validator context.</returns>
+    private static ValidatorContext CreateValidatorContext(string directory)
     {
         // Even though this method sets up the validator, it is pretty fast as the profiles are lazy loaded
         var sourceSettings = new DirectorySourceSettings
@@ -84,8 +105,9 @@ public static class ProfileValidator
 
         var source = new DirectorySource(directory, sourceSettings);
         var resolver = new CachedResolver(new SnapshotSource(source));
+        var validator = new Validator(resolver, new LocalTerminologyService(resolver));
 
-        return new Validator(resolver, new LocalTerminologyService(resolver));
+        return new ValidatorContext(validator);
     }
 
     /// <summary>
@@ -162,5 +184,20 @@ public static class ProfileValidator
             FhirConverterErrorCode.InvalidByProfileError,
             string.Format(Resources.InvalidByProfileError, result.ToString()),
             original?.ToString(Formatting.Indented) ?? string.Empty);
+    }
+
+    private sealed class ValidatorContext
+    {
+        public ValidatorContext(Validator validator)
+        {
+            ArgumentNullException.ThrowIfNull(validator);
+
+            Validator = validator;
+            SyncRoot = new object();
+        }
+
+        public object SyncRoot { get; }
+
+        public Validator Validator { get; }
     }
 }

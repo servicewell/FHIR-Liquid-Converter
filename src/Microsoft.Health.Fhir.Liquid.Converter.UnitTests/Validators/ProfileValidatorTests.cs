@@ -211,6 +211,25 @@ namespace Microsoft.Health.Fhir.Liquid.Converter.UnitTests.Validators
             Assert.Null(exception);
         }
 
+        [Fact]
+        public async Task Validate_Should_Handle_Concurrent_Validation_For_Valid_Resources_With_Profile()
+        {
+            const int concurrentCalls = 16;
+            var tasks = new List<Task>();
+
+            for (int i = 0; i < concurrentCalls; i++)
+            {
+                tasks.Add(Task.Run(() =>
+                {
+                    var patient = CreatePatientWithProfile();
+                    ProfileValidator.Validate(patient);
+                }));
+            }
+
+            var exception = await Record.ExceptionAsync(() => Task.WhenAll(tasks)).ConfigureAwait(false);
+            Assert.Null(exception);
+        }
+
         private static FhirModel.Schedule CreateNonCompliantSchedule()
         {
             return new FhirModel.Schedule
